@@ -91,7 +91,7 @@ const EditModal = ({ open, tokenId, onCancel, onOk }) => {
     const { success, message, data } = res.data;
     if (success) {
       data.is_edit = true;
-      if (data.models === '') {
+      if (!data.models || data.models === '') {
         data.models = [];
       } else {
         data.models = data.models.split(',');

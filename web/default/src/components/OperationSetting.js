@@ -24,6 +24,9 @@ const OperationSetting = () => {
     TopUpLink: '',
     ChatLink: '',
     QuotaPerUnit: 0,
+    CurrencySymbol: '',
+    CurrencyUnitName: '',
+    PricePerMillionTokens: '',
     AutomaticDisableChannelEnabled: '',
     AutomaticEnableChannelEnabled: '',
     ChannelDisableThreshold: 0,
@@ -57,6 +60,12 @@ const OperationSetting = () => {
         }
         newInputs[item.key] = item.value;
       });
+      if (newInputs.QuotaPerUnit) {
+        const qpu = parseFloat(newInputs.QuotaPerUnit);
+        if (!Number.isNaN(qpu) && qpu > 0) {
+          newInputs.PricePerMillionTokens = (1000000 / qpu).toString();
+        }
+      }
       setInputs(newInputs);
       setOriginInputs(newInputs);
     } else {
@@ -90,7 +99,27 @@ const OperationSetting = () => {
     if (name.endsWith('Enabled')) {
       await updateOption(name, value);
     } else {
-      setInputs((inputs) => ({ ...inputs, [name]: value }));
+      if (name === 'QuotaPerUnit') {
+        const qpu = parseFloat(value);
+        const ppm =
+          !Number.isNaN(qpu) && qpu > 0 ? (1000000 / qpu).toString() : '';
+        setInputs((inputs) => ({
+          ...inputs,
+          [name]: value,
+          PricePerMillionTokens: ppm,
+        }));
+      } else if (name === 'PricePerMillionTokens') {
+        const ppm = parseFloat(value);
+        const qpu =
+          !Number.isNaN(ppm) && ppm > 0 ? (1000000 / ppm).toString() : '';
+        setInputs((inputs) => ({
+          ...inputs,
+          [name]: value,
+          QuotaPerUnit: qpu || inputs.QuotaPerUnit,
+        }));
+      } else {
+        setInputs((inputs) => ({ ...inputs, [name]: value }));
+      }
     }
   };
 
@@ -161,6 +190,12 @@ const OperationSetting = () => {
         }
         if (originInputs['QuotaPerUnit'] !== inputs.QuotaPerUnit) {
           await updateOption('QuotaPerUnit', inputs.QuotaPerUnit);
+        }
+        if (originInputs['CurrencySymbol'] !== inputs.CurrencySymbol) {
+          await updateOption('CurrencySymbol', inputs.CurrencySymbol);
+        }
+        if (originInputs['CurrencyUnitName'] !== inputs.CurrencyUnitName) {
+          await updateOption('CurrencyUnitName', inputs.CurrencyUnitName);
         }
         if (originInputs['RetryTimes'] !== inputs.RetryTimes) {
           await updateOption('RetryTimes', inputs.RetryTimes);
@@ -292,7 +327,7 @@ const OperationSetting = () => {
               onChange={handleInputChange}
             />
           </Form.Group>
-          <Form.Group widths={4}>
+          <Form.Group widths='equal'>
             <Form.Input
               label={t('setting.operation.log.target_time')}
               value={historyTimestamp}
@@ -397,6 +432,18 @@ const OperationSetting = () => {
               )}
             />
             <Form.Input
+              label={t('setting.operation.general.price_per_million_tokens')}
+              name='PricePerMillionTokens'
+              onChange={handleInputChange}
+              autoComplete='new-password'
+              value={inputs.PricePerMillionTokens}
+              type='number'
+              step='0.000001'
+              placeholder={t(
+                'setting.operation.general.price_per_million_tokens_placeholder'
+              )}
+            />
+            <Form.Input
               label={t('setting.operation.general.retry_times')}
               name='RetryTimes'
               type={'number'}
@@ -407,6 +454,28 @@ const OperationSetting = () => {
               value={inputs.RetryTimes}
               placeholder={t(
                 'setting.operation.general.retry_times_placeholder'
+              )}
+            />
+          </Form.Group>
+          <Form.Group widths={4}>
+            <Form.Input
+              label={t('setting.operation.general.currency_symbol')}
+              name='CurrencySymbol'
+              onChange={handleInputChange}
+              autoComplete='new-password'
+              value={inputs.CurrencySymbol}
+              placeholder={t(
+                'setting.operation.general.currency_symbol_placeholder'
+              )}
+            />
+            <Form.Input
+              label={t('setting.operation.general.currency_unit')}
+              name='CurrencyUnitName'
+              onChange={handleInputChange}
+              autoComplete='new-password'
+              value={inputs.CurrencyUnitName}
+              placeholder={t(
+                'setting.operation.general.currency_unit_placeholder'
               )}
             />
           </Form.Group>

@@ -19,6 +19,8 @@ var Logo = ""
 var TopUpLink = ""
 var ChatLink = ""
 var QuotaPerUnit = 500 * 1000.0 // $0.002 / 1K tokens
+var CurrencySymbol = "$"
+var CurrencyUnitName = "USD"
 var DisplayInCurrencyEnabled = true
 var DisplayTokenStatEnabled = true
 

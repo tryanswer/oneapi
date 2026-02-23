@@ -104,6 +104,12 @@
       "model_mapping_placeholder": "Optional, used to modify model names in request body. A JSON string where keys are request model names and values are target model names",
       "system_prompt": "System Prompt",
       "system_prompt_placeholder": "Optional, used to force set system prompt. Use with custom model & model mapping. First create a unique custom model name above, then map it to a natively supported model",
+      "channel_ratio": "Channel Ratio",
+      "channel_ratio_placeholder": "Optional. Fallback ratio for this channel",
+      "model_ratio": "Model Ratio (Channel)",
+      "model_ratio_placeholder": "JSON string. Keys are model names, values are ratios (e.g. {\"qwen-turbo\":1.2})",
+      "completion_ratio": "Completion Ratio (Channel)",
+      "completion_ratio_placeholder": "JSON string. Keys are model names, values are completion ratios (output/input)",
       "proxy_url": "Proxy",
       "proxy_url_placeholder": "This is optional and used for API calls via a proxy. Please enter the proxy URL, formatted as: https://domain.com",
       "base_url": "Base URL",
@@ -125,6 +131,8 @@
         "name_required": "Please enter channel name and key!",
         "models_required": "Please select at least one model!",
         "model_mapping_invalid": "Model mapping must be valid JSON format!",
+        "model_ratio_invalid": "Model ratio must be valid JSON format!",
+        "completion_ratio_invalid": "Completion ratio must be valid JSON format!",
         "update_success": "Channel updated successfully!",
         "create_success": "Channel created successfully!"
       },
@@ -240,8 +248,8 @@
   },
   "common": {
     "quota": {
-      "display": "Equivalent: ${{amount}}",
-      "display_short": "${{amount}}",
+      "display": "Equivalent: {{symbol}}{{amount}}",
+      "display_short": "{{symbol}}{{amount}}",
       "unit": "$"
     }
   },
@@ -662,8 +670,14 @@
         "topup_link_placeholder": "e.g.: Card selling website purchase link",
         "chat_link": "Chat Page Link",
         "chat_link_placeholder": "e.g.: ChatGPT Next Web deployment address",
-        "quota_per_unit": "Quota per Dollar",
+        "quota_per_unit": "Quota per Currency Unit",
         "quota_per_unit_placeholder": "Quota exchangeable per unit of currency",
+        "currency_symbol": "Currency Symbol",
+        "currency_symbol_placeholder": "e.g. ¥ or $",
+        "currency_unit": "Currency Unit",
+        "currency_unit_placeholder": "e.g. CNY or USD",
+        "price_per_million_tokens": "Price per 1M Tokens",
+        "price_per_million_tokens_placeholder": "Price for 1,000,000 tokens",
         "retry_times": "Retry Times on Failure",
         "retry_times_placeholder": "Number of retry attempts on failure",
         "display_in_currency": "Display Quota in Currency Format",

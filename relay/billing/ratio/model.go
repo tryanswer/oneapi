@@ -709,6 +709,15 @@ func GetModelRatio(name string, channelType int) float64 {
 	return 30
 }
 
+func GetModelRatioWithOverride(name string, channelType int, override map[string]float64) float64 {
+	if override != nil {
+		if ratio, ok := getRatioFromMap(name, channelType, override); ok {
+			return ratio
+		}
+	}
+	return GetModelRatio(name, channelType)
+}
+
 func CompletionRatio2JSONString() string {
 	jsonBytes, err := json.Marshal(CompletionRatio)
 	if err != nil {
@@ -832,4 +841,37 @@ func GetCompletionRatio(name string, channelType int) float64 {
 	}
 
 	return 1
+}
+
+func GetCompletionRatioWithOverride(name string, channelType int, override map[string]float64) float64 {
+	if override != nil {
+		if ratio, ok := getRatioFromMap(name, channelType, override); ok {
+			return ratio
+		}
+	}
+	return GetCompletionRatio(name, channelType)
+}
+
+func GetChannelRatio(override float64) float64 {
+	if override > 0 {
+		return override
+	}
+	return 1
+}
+
+func getRatioFromMap(name string, channelType int, ratios map[string]float64) (float64, bool) {
+	if strings.HasPrefix(name, "qwen-") && strings.HasSuffix(name, "-internet") {
+		name = strings.TrimSuffix(name, "-internet")
+	}
+	if strings.HasPrefix(name, "command-") && strings.HasSuffix(name, "-internet") {
+		name = strings.TrimSuffix(name, "-internet")
+	}
+	model := fmt.Sprintf("%s(%d)", name, channelType)
+	if ratio, ok := ratios[model]; ok {
+		return ratio, true
+	}
+	if ratio, ok := ratios[name]; ok {
+		return ratio, true
+	}
+	return 0, false
 }

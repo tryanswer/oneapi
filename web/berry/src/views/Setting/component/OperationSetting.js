@@ -32,6 +32,9 @@ const OperationSetting = () => {
     TopUpLink: "",
     ChatLink: "",
     QuotaPerUnit: 0,
+    CurrencySymbol: "",
+    CurrencyUnitName: "",
+    PricePerMillionTokens: "",
     AutomaticDisableChannelEnabled: "",
     AutomaticEnableChannelEnabled: "",
     ChannelDisableThreshold: 0,
@@ -61,6 +64,12 @@ const OperationSetting = () => {
         }
         newInputs[item.key] = item.value;
       });
+      if (newInputs.QuotaPerUnit) {
+        const qpu = parseFloat(newInputs.QuotaPerUnit);
+        if (!Number.isNaN(qpu) && qpu > 0) {
+          newInputs.PricePerMillionTokens = (1000000 / qpu).toString();
+        }
+      }
       setInputs(newInputs);
       setOriginInputs(newInputs);
     } else {
@@ -97,7 +106,27 @@ const OperationSetting = () => {
       await updateOption(name, value);
       showSuccess("设置成功！");
     } else {
-      setInputs((inputs) => ({ ...inputs, [name]: value }));
+      if (name === "QuotaPerUnit") {
+        const qpu = parseFloat(value);
+        const ppm =
+          !Number.isNaN(qpu) && qpu > 0 ? (1000000 / qpu).toString() : "";
+        setInputs((inputs) => ({
+          ...inputs,
+          [name]: value,
+          PricePerMillionTokens: ppm,
+        }));
+      } else if (name === "PricePerMillionTokens") {
+        const ppm = parseFloat(value);
+        const qpu =
+          !Number.isNaN(ppm) && ppm > 0 ? (1000000 / ppm).toString() : "";
+        setInputs((inputs) => ({
+          ...inputs,
+          [name]: value,
+          QuotaPerUnit: qpu || inputs.QuotaPerUnit,
+        }));
+      } else {
+        setInputs((inputs) => ({ ...inputs, [name]: value }));
+      }
     }
   };
 
@@ -169,6 +198,12 @@ const OperationSetting = () => {
         if (originInputs["QuotaPerUnit"] !== inputs.QuotaPerUnit) {
           await updateOption("QuotaPerUnit", inputs.QuotaPerUnit);
         }
+        if (originInputs["CurrencySymbol"] !== inputs.CurrencySymbol) {
+          await updateOption("CurrencySymbol", inputs.CurrencySymbol);
+        }
+        if (originInputs["CurrencyUnitName"] !== inputs.CurrencyUnitName) {
+          await updateOption("CurrencyUnitName", inputs.CurrencyUnitName);
+        }
         if (originInputs["RetryTimes"] !== inputs.RetryTimes) {
           await updateOption("RetryTimes", inputs.RetryTimes);
         }
@@ -223,14 +258,28 @@ const OperationSetting = () => {
               />
             </FormControl>
             <FormControl fullWidth>
-              <InputLabel htmlFor="QuotaPerUnit">单位额度</InputLabel>
+              <InputLabel htmlFor="QuotaPerUnit">单位货币额度</InputLabel>
               <OutlinedInput
                 id="QuotaPerUnit"
                 name="QuotaPerUnit"
                 value={inputs.QuotaPerUnit}
                 onChange={handleInputChange}
-                label="单位额度"
+                label="单位货币额度"
                 placeholder="一单位货币能兑换的额度"
+                disabled={loading}
+              />
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel htmlFor="PricePerMillionTokens">
+                每百万 Tokens 定价
+              </InputLabel>
+              <OutlinedInput
+                id="PricePerMillionTokens"
+                name="PricePerMillionTokens"
+                value={inputs.PricePerMillionTokens}
+                onChange={handleInputChange}
+                label="每百万 Tokens 定价"
+                placeholder="输入每 1,000,000 tokens 的价格"
                 disabled={loading}
               />
             </FormControl>
@@ -243,6 +292,35 @@ const OperationSetting = () => {
                 onChange={handleInputChange}
                 label="重试次数"
                 placeholder="重试次数"
+                disabled={loading}
+              />
+            </FormControl>
+          </Stack>
+          <Stack
+            direction={{ sm: "column", md: "row" }}
+            spacing={{ xs: 3, sm: 2, md: 4 }}
+          >
+            <FormControl fullWidth>
+              <InputLabel htmlFor="CurrencySymbol">货币符号</InputLabel>
+              <OutlinedInput
+                id="CurrencySymbol"
+                name="CurrencySymbol"
+                value={inputs.CurrencySymbol}
+                onChange={handleInputChange}
+                label="货币符号"
+                placeholder="例如 ¥ 或 $"
+                disabled={loading}
+              />
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel htmlFor="CurrencyUnitName">货币名称</InputLabel>
+              <OutlinedInput
+                id="CurrencyUnitName"
+                name="CurrencyUnitName"
+                value={inputs.CurrencyUnitName}
+                onChange={handleInputChange}
+                label="货币名称"
+                placeholder="例如 CNY 或 USD"
                 disabled={loading}
               />
             </FormControl>

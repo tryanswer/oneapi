@@ -80,22 +80,38 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
   const [basicModels, setBasicModels] = useState([]);
 
   const initChannel = (typeValue) => {
+    const mergedInputLabelConfig = {
+      ...(defaultConfig.inputLabel.config || {}),
+      ...(typeConfig[typeValue]?.inputLabel?.config || {})
+    };
     if (typeConfig[typeValue]?.inputLabel) {
       setInputLabel({
         ...defaultConfig.inputLabel,
-        ...typeConfig[typeValue].inputLabel
+        ...typeConfig[typeValue].inputLabel,
+        config: Object.keys(mergedInputLabelConfig).length ? mergedInputLabelConfig : null
       });
     } else {
-      setInputLabel(defaultConfig.inputLabel);
+      setInputLabel({
+        ...defaultConfig.inputLabel,
+        config: Object.keys(mergedInputLabelConfig).length ? mergedInputLabelConfig : null
+      });
     }
 
+    const mergedPromptConfig = {
+      ...(defaultConfig.prompt.config || {}),
+      ...(typeConfig[typeValue]?.prompt?.config || {})
+    };
     if (typeConfig[typeValue]?.prompt) {
       setInputPrompt({
         ...defaultConfig.prompt,
-        ...typeConfig[typeValue].prompt
+        ...typeConfig[typeValue].prompt,
+        config: Object.keys(mergedPromptConfig).length ? mergedPromptConfig : null
       });
     } else {
-      setInputPrompt(defaultConfig.prompt);
+      setInputPrompt({
+        ...defaultConfig.prompt,
+        config: Object.keys(mergedPromptConfig).length ? mergedPromptConfig : null
+      });
     }
 
     return typeConfig[typeValue]?.input;
@@ -172,7 +188,33 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
 
     let res;
     const modelsStr = values.models.map((model) => model.id).join(',');
-    const configStr = JSON.stringify(values.config);
+    const cleanedConfig = { ...(values.config || {}) };
+    if (cleanedConfig.model_ratio) {
+      try {
+        cleanedConfig.model_ratio = JSON.parse(cleanedConfig.model_ratio);
+      } catch (e) {
+        showError('模型倍率必须是合法的 JSON 格式！');
+        setSubmitting(false);
+        return;
+      }
+    } else {
+      delete cleanedConfig.model_ratio;
+    }
+    if (cleanedConfig.completion_ratio) {
+      try {
+        cleanedConfig.completion_ratio = JSON.parse(cleanedConfig.completion_ratio);
+      } catch (e) {
+        showError('补全倍率必须是合法的 JSON 格式！');
+        setSubmitting(false);
+        return;
+      }
+    } else {
+      delete cleanedConfig.completion_ratio;
+    }
+    if (cleanedConfig.channel_ratio === '' || cleanedConfig.channel_ratio === null) {
+      delete cleanedConfig.channel_ratio;
+    }
+    const configStr = JSON.stringify(cleanedConfig);
     values.group = values.groups.join(',');
     if (channelId) {
       res = await API.put(`/api/channel/`, {
@@ -238,7 +280,14 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
         data.model_mapping = JSON.stringify(JSON.parse(data.model_mapping), null, 2);
       }
       if (data.config !== '') {
-        data.config = JSON.parse(data.config);
+        const parsedConfig = JSON.parse(data.config);
+        if (parsedConfig.model_ratio && typeof parsedConfig.model_ratio === 'object') {
+          parsedConfig.model_ratio = JSON.stringify(parsedConfig.model_ratio, null, 2);
+        }
+        if (parsedConfig.completion_ratio && typeof parsedConfig.completion_ratio === 'object') {
+          parsedConfig.completion_ratio = JSON.stringify(parsedConfig.completion_ratio, null, 2);
+        }
+        data.config = parsedConfig;
       }
 
       data.base_url = data.base_url ?? '';

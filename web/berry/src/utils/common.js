@@ -154,9 +154,10 @@ export function calculateQuota(quota, digits = 2) {
 
 export function renderQuota(quota, digits = 2) {
     let displayInCurrency = localStorage.getItem('display_in_currency');
+    const currencySymbol = localStorage.getItem('currency_symbol') || '$';
     displayInCurrency = displayInCurrency === 'true';
     if (displayInCurrency) {
-        return '$' + calculateQuota(quota, digits);
+        return currencySymbol + calculateQuota(quota, digits);
     }
     return renderNumber(quota);
 }

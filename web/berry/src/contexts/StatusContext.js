@@ -20,6 +20,8 @@ const StatusProvider = ({ children }) => {
       }
       localStorage.setItem("siteInfo", JSON.stringify(data));
       localStorage.setItem("quota_per_unit", data.quota_per_unit);
+      localStorage.setItem("currency_symbol", data.currency_symbol || "$");
+      localStorage.setItem("currency_unit", data.currency_unit || "USD");
       localStorage.setItem("display_in_currency", data.display_in_currency);
       dispatch({ type: SET_SITE_INFO, payload: data });
       if (

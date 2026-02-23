@@ -50,6 +50,9 @@ type ChannelConfig struct {
 	Plugin            string `json:"plugin,omitempty"`
 	VertexAIProjectID string `json:"vertex_ai_project_id,omitempty"`
 	VertexAIADC       string `json:"vertex_ai_adc,omitempty"`
+	ChannelRatio      float64            `json:"channel_ratio,omitempty"`
+	ModelRatio        map[string]float64 `json:"model_ratio,omitempty"`
+	CompletionRatio   map[string]float64 `json:"completion_ratio,omitempty"`
 }
 
 func GetAllChannels(startIdx int, num int, scope string) ([]*Channel, error) {

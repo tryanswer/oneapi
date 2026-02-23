@@ -73,6 +73,8 @@ func InitOptionMap() {
 	config.OptionMap["TopUpLink"] = config.TopUpLink
 	config.OptionMap["ChatLink"] = config.ChatLink
 	config.OptionMap["QuotaPerUnit"] = strconv.FormatFloat(config.QuotaPerUnit, 'f', -1, 64)
+	config.OptionMap["CurrencySymbol"] = config.CurrencySymbol
+	config.OptionMap["CurrencyUnitName"] = config.CurrencyUnitName
 	config.OptionMap["RetryTimes"] = strconv.Itoa(config.RetryTimes)
 	config.OptionMap["Theme"] = config.Theme
 	config.OptionMapRWMutex.Unlock()
@@ -237,6 +239,10 @@ func updateOptionMap(key string, value string) (err error) {
 		config.ChannelDisableThreshold, _ = strconv.ParseFloat(value, 64)
 	case "QuotaPerUnit":
 		config.QuotaPerUnit, _ = strconv.ParseFloat(value, 64)
+	case "CurrencySymbol":
+		config.CurrencySymbol = value
+	case "CurrencyUnitName":
+		config.CurrencyUnitName = value
 	case "Theme":
 		config.Theme = value
 	}

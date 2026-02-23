@@ -104,6 +104,12 @@
       "model_mapping_placeholder": "此项可选，用于修改请求体中的模型名称，为一个 JSON 字符串，键为请求中模型名称，值为要替换的模型名称",
       "system_prompt": "系统提示词",
       "system_prompt_placeholder": "此项可选，用于强制设置给定的系统提示词，请配合自定义模型 & 模型重定向使用，首先创建一个唯一的自定义模型名称并在上面填入，之后将该自定义模型重定向映射到该渠道一个原生支持的模型",
+      "channel_ratio": "渠道倍率",
+      "channel_ratio_placeholder": "此项可选，作为该渠道的兜底倍率",
+      "model_ratio": "模型倍率（渠道级）",
+      "model_ratio_placeholder": "JSON 字符串，键为模型名称，值为倍率（例如 {\"qwen-turbo\":1.2}）",
+      "completion_ratio": "补全倍率（渠道级）",
+      "completion_ratio_placeholder": "JSON 字符串，键为模型名称，值为补全倍率（输出/输入）",
       "proxy_url": "代理",
       "proxy_url_placeholder": "此项可选，用于通过代理站来进行 API 调用，请输入代理站地址，格式为：https://domain.com。注意，这里所需要填入的代理地址仅会在实际请求时替换域名部分，如果你想填入 OpenAI SDK 中所要求的 Base URL，请使用 OpenAI 兼容渠道类型",
       "base_url": "Base URL",
@@ -125,6 +131,8 @@
         "name_required": "请填写渠道名称和渠道密钥！",
         "models_required": "请至少选择一个模型！",
         "model_mapping_invalid": "模型映射必须是合法的 JSON 格式！",
+        "model_ratio_invalid": "模型倍率必须是合法的 JSON 格式！",
+        "completion_ratio_invalid": "补全倍率必须是合法的 JSON 格式！",
         "update_success": "渠道更新成功！",
         "create_success": "渠道创建成功！"
       },
@@ -240,8 +248,8 @@
   },
   "common": {
     "quota": {
-      "display": "等价金额：${{amount}}",
-      "display_short": "${{amount}}",
+      "display": "等价金额：{{symbol}}{{amount}}",
+      "display_short": "{{symbol}}{{amount}}",
       "unit": "$"
     }
   },
@@ -660,8 +668,14 @@
         "topup_link_placeholder": "例如发卡网站的购买链接",
         "chat_link": "聊天页面链接",
         "chat_link_placeholder": "例如 ChatGPT Next Web 的部署地址",
-        "quota_per_unit": "单位美元额度",
+        "quota_per_unit": "单位货币额度",
         "quota_per_unit_placeholder": "一单位货币能兑换的额度",
+        "currency_symbol": "货币符号",
+        "currency_symbol_placeholder": "例如 ¥ 或 $",
+        "currency_unit": "货币名称",
+        "currency_unit_placeholder": "例如 CNY 或 USD",
+        "price_per_million_tokens": "每百万 Tokens 定价",
+        "price_per_million_tokens_placeholder": "输入每 1,000,000 tokens 的价格",
         "retry_times": "失败重试次数",
         "retry_times_placeholder": "失败重试次数",
         "display_in_currency": "以货币形式显示额度",

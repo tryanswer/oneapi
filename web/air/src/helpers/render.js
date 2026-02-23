@@ -44,9 +44,10 @@ export function renderNumber(num) {
 
 export function renderQuotaNumberWithDigit(num, digits = 2) {
     let displayInCurrency = localStorage.getItem('display_in_currency');
+    const currencySymbol = localStorage.getItem('currency_symbol') || '$';
     num = num.toFixed(digits);
     if (displayInCurrency) {
-        return '$' + num;
+        return currencySymbol + num;
     }
     return num;
 }
@@ -94,10 +95,11 @@ export function getQuotaWithUnit(quota, digits = 6) {
 export function renderQuota(quota, digits = 2) {
     let quotaPerUnit = localStorage.getItem('quota_per_unit');
     let displayInCurrency = localStorage.getItem('display_in_currency');
+    const currencySymbol = localStorage.getItem('currency_symbol') || '$';
     quotaPerUnit = parseFloat(quotaPerUnit);
     displayInCurrency = displayInCurrency === 'true';
     if (displayInCurrency) {
-        return '$' + (quota / quotaPerUnit).toFixed(digits);
+        return currencySymbol + (quota / quotaPerUnit).toFixed(digits);
     }
     return renderNumber(quota);
 }

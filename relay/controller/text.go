@@ -40,9 +40,10 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	// set system prompt if not empty
 	systemPromptReset := setSystemPrompt(ctx, textRequest, meta.ForcedSystemPrompt)
 	// get model ratio & group ratio
-	modelRatio := billingratio.GetModelRatio(textRequest.Model, meta.ChannelType)
+	modelRatio := billingratio.GetModelRatioWithOverride(textRequest.Model, meta.ChannelType, meta.Config.ModelRatio)
 	groupRatio := billingratio.GetGroupRatio(meta.Group)
-	ratio := modelRatio * groupRatio
+	channelRatio := billingratio.GetChannelRatio(meta.Config.ChannelRatio)
+	ratio := modelRatio * groupRatio * channelRatio
 	// pre-consume quota
 	promptTokens := getPromptTokens(textRequest, meta.Mode)
 	meta.PromptTokens = promptTokens
@@ -83,7 +84,7 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		return respErr
 	}
 	// post-consume quota
-	go postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio, systemPromptReset)
+	go postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio, channelRatio, systemPromptReset)
 	return nil
 }
 

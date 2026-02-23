@@ -64,6 +64,9 @@ const EditChannel = () => {
     user_id: '',
     vertex_ai_project_id: '',
     vertex_ai_adc: '',
+    channel_ratio: '',
+    model_ratio: '',
+    completion_ratio: '',
   });
   const handleInputChange = (e, { name, value }) => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
@@ -103,7 +106,14 @@ const EditChannel = () => {
       }
       setInputs(data);
       if (data.config !== '') {
-        setConfig(JSON.parse(data.config));
+        const parsedConfig = JSON.parse(data.config);
+        if (parsedConfig.model_ratio && typeof parsedConfig.model_ratio === 'object') {
+          parsedConfig.model_ratio = JSON.stringify(parsedConfig.model_ratio, null, 2);
+        }
+        if (parsedConfig.completion_ratio && typeof parsedConfig.completion_ratio === 'object') {
+          parsedConfig.completion_ratio = JSON.stringify(parsedConfig.completion_ratio, null, 2);
+        }
+        setConfig(parsedConfig);
       }
       setBasicModels(getChannelModels(data.type));
     } else {
@@ -207,7 +217,29 @@ const EditChannel = () => {
     let res;
     localInputs.models = localInputs.models.join(',');
     localInputs.group = localInputs.groups.join(',');
-    localInputs.config = JSON.stringify(config);
+    const cleanedConfig = { ...config };
+    if (cleanedConfig.model_ratio) {
+      if (!verifyJSON(cleanedConfig.model_ratio)) {
+        showInfo(t('channel.edit.messages.model_ratio_invalid'));
+        return;
+      }
+      cleanedConfig.model_ratio = JSON.parse(cleanedConfig.model_ratio);
+    } else {
+      delete cleanedConfig.model_ratio;
+    }
+    if (cleanedConfig.completion_ratio) {
+      if (!verifyJSON(cleanedConfig.completion_ratio)) {
+        showInfo(t('channel.edit.messages.completion_ratio_invalid'));
+        return;
+      }
+      cleanedConfig.completion_ratio = JSON.parse(cleanedConfig.completion_ratio);
+    } else {
+      delete cleanedConfig.completion_ratio;
+    }
+    if (cleanedConfig.channel_ratio === '' || cleanedConfig.channel_ratio === null) {
+      delete cleanedConfig.channel_ratio;
+    }
+    localInputs.config = JSON.stringify(cleanedConfig);
     if (isEdit) {
       res = await API.put(`/api/channel/`, {
         ...localInputs,
@@ -512,6 +544,46 @@ const EditChannel = () => {
                     name='system_prompt'
                     onChange={handleInputChange}
                     value={inputs.system_prompt}
+                    style={{
+                      minHeight: 150,
+                      fontFamily: 'JetBrains Mono, Consolas',
+                    }}
+                    autoComplete='new-password'
+                  />
+                </Form.Field>
+                <Form.Field>
+                  <Form.Input
+                    label={t('channel.edit.channel_ratio')}
+                    placeholder={t('channel.edit.channel_ratio_placeholder')}
+                    name='channel_ratio'
+                    onChange={handleConfigChange}
+                    value={config.channel_ratio}
+                    type='number'
+                    step='0.0001'
+                    autoComplete='new-password'
+                  />
+                </Form.Field>
+                <Form.Field>
+                  <Form.TextArea
+                    label={t('channel.edit.model_ratio')}
+                    placeholder={t('channel.edit.model_ratio_placeholder')}
+                    name='model_ratio'
+                    onChange={handleConfigChange}
+                    value={config.model_ratio}
+                    style={{
+                      minHeight: 150,
+                      fontFamily: 'JetBrains Mono, Consolas',
+                    }}
+                    autoComplete='new-password'
+                  />
+                </Form.Field>
+                <Form.Field>
+                  <Form.TextArea
+                    label={t('channel.edit.completion_ratio')}
+                    placeholder={t('channel.edit.completion_ratio_placeholder')}
+                    name='completion_ratio'
+                    onChange={handleConfigChange}
+                    value={config.completion_ratio}
                     style={{
                       minHeight: 150,
                       fontFamily: 'JetBrains Mono, Consolas',

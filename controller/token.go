@@ -107,9 +107,11 @@ func GetTokenStatus(c *gin.Context) {
 	})
 }
 
+const tokenNameMaxLen = 128
+
 func validateToken(c *gin.Context, token model.Token) error {
-	if len(token.Name) > 30 {
-		return fmt.Errorf("令牌名称过长")
+	if len(token.Name) > tokenNameMaxLen {
+		return fmt.Errorf("令牌名称过长（最大 %d）", tokenNameMaxLen)
 	}
 	if token.Subnet != nil && *token.Subnet != "" {
 		err := network.IsValidSubnets(*token.Subnet)

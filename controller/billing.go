@@ -57,22 +57,32 @@ func GetSubscription(c *gin.Context) {
 		HardLimitUSD:       amount,
 		SystemHardLimitUSD: amount,
 		AccessUntil:        expiredTime,
+		UsedTokens:         usedQuota,
+		RemainTokens:       remainQuota,
+		TotalTokens:        quota,
 	}
 	c.JSON(200, subscription)
 	return
 }
 
 func GetUsage(c *gin.Context) {
-	var quota int64
+	var remainQuota int64
+	var usedQuota int64
 	var err error
 	var token *model.Token
 	if config.DisplayTokenStatEnabled {
 		tokenId := c.GetInt(ctxkey.TokenId)
 		token, err = model.GetTokenById(tokenId)
-		quota = token.UsedQuota
+		remainQuota = token.RemainQuota
+		usedQuota = token.UsedQuota
 	} else {
 		userId := c.GetInt(ctxkey.Id)
-		quota, err = model.GetUserUsedQuota(userId)
+		remainQuota, err = model.GetUserQuota(userId)
+		if err != nil {
+			usedQuota, err = model.GetUserUsedQuota(userId)
+		} else {
+			usedQuota, err = model.GetUserUsedQuota(userId)
+		}
 	}
 	if err != nil {
 		Error := relaymodel.Error{
@@ -84,13 +94,17 @@ func GetUsage(c *gin.Context) {
 		})
 		return
 	}
-	amount := float64(quota)
+	totalQuota := remainQuota + usedQuota
+	amount := float64(usedQuota)
 	if config.DisplayInCurrencyEnabled {
 		amount /= config.QuotaPerUnit
 	}
 	usage := OpenAIUsageResponse{
 		Object:     "list",
 		TotalUsage: amount * 100,
+		UsedTokens: usedQuota,
+		RemainTokens: remainQuota,
+		TotalTokens: totalQuota,
 	}
 	c.JSON(200, usage)
 	return

@@ -55,10 +55,11 @@ export function renderQuota(quota, t, precision = 2) {
   const quotaPerUnit = parseFloat(
     localStorage.getItem('quota_per_unit') || '1'
   );
+  const currencySymbol = localStorage.getItem('currency_symbol') || '$';
 
   if (displayInCurrency) {
     const amount = (quota / quotaPerUnit).toFixed(precision);
-    return t('common.quota.display_short', { amount });
+    return t('common.quota.display_short', { amount, symbol: currencySymbol });
   }
 
   return renderNumber(quota);
@@ -70,10 +71,11 @@ export function renderQuotaWithPrompt(quota, t) {
   const quotaPerUnit = parseFloat(
     localStorage.getItem('quota_per_unit') || '1'
   );
+  const currencySymbol = localStorage.getItem('currency_symbol') || '$';
 
   if (displayInCurrency) {
     const amount = (quota / quotaPerUnit).toFixed(2);
-    return ` (${t('common.quota.display', { amount })})`;
+    return ` (${t('common.quota.display', { amount, symbol: currencySymbol })})`;
   }
 
   return '';

@@ -16,6 +16,9 @@ const OperationSetting = () => {
     TopUpLink: '',
     ChatLink: '',
     QuotaPerUnit: 0,
+    CurrencySymbol: '',
+    CurrencyUnitName: '',
+    PricePerMillionTokens: '',
     AutomaticDisableChannelEnabled: '',
     AutomaticEnableChannelEnabled: '',
     ChannelDisableThreshold: 0,
@@ -43,6 +46,12 @@ const OperationSetting = () => {
         }
         newInputs[item.key] = item.value;
       });
+      if (newInputs.QuotaPerUnit) {
+        const qpu = parseFloat(newInputs.QuotaPerUnit);
+        if (!Number.isNaN(qpu) && qpu > 0) {
+          newInputs.PricePerMillionTokens = (1000000 / qpu).toString();
+        }
+      }
       setInputs(newInputs);
       setOriginInputs(newInputs);
     } else {
@@ -76,7 +85,27 @@ const OperationSetting = () => {
     if (name.endsWith('Enabled')) {
       await updateOption(name, value);
     } else {
-      setInputs((inputs) => ({ ...inputs, [name]: value }));
+      if (name === 'QuotaPerUnit') {
+        const qpu = parseFloat(value);
+        const ppm =
+          !Number.isNaN(qpu) && qpu > 0 ? (1000000 / qpu).toString() : '';
+        setInputs((inputs) => ({
+          ...inputs,
+          [name]: value,
+          PricePerMillionTokens: ppm,
+        }));
+      } else if (name === 'PricePerMillionTokens') {
+        const ppm = parseFloat(value);
+        const qpu =
+          !Number.isNaN(ppm) && ppm > 0 ? (1000000 / ppm).toString() : '';
+        setInputs((inputs) => ({
+          ...inputs,
+          [name]: value,
+          QuotaPerUnit: qpu || inputs.QuotaPerUnit,
+        }));
+      } else {
+        setInputs((inputs) => ({ ...inputs, [name]: value }));
+      }
     }
   };
 
@@ -137,6 +166,12 @@ const OperationSetting = () => {
         if (originInputs['QuotaPerUnit'] !== inputs.QuotaPerUnit) {
           await updateOption('QuotaPerUnit', inputs.QuotaPerUnit);
         }
+        if (originInputs['CurrencySymbol'] !== inputs.CurrencySymbol) {
+          await updateOption('CurrencySymbol', inputs.CurrencySymbol);
+        }
+        if (originInputs['CurrencyUnitName'] !== inputs.CurrencyUnitName) {
+          await updateOption('CurrencyUnitName', inputs.CurrencyUnitName);
+        }
         if (originInputs['RetryTimes'] !== inputs.RetryTimes) {
           await updateOption('RetryTimes', inputs.RetryTimes);
         }
@@ -162,7 +197,7 @@ const OperationSetting = () => {
           <Header as='h3'>
             通用设置
           </Header>
-          <Form.Group widths={4}>
+          <Form.Group widths='equal'>
             <Form.Input
               label='充值链接'
               name='TopUpLink'
@@ -182,7 +217,7 @@ const OperationSetting = () => {
               placeholder='例如 ChatGPT Next Web 的部署地址'
             />
             <Form.Input
-              label='单位美元额度'
+              label='单位货币额度'
               name='QuotaPerUnit'
               onChange={handleInputChange}
               autoComplete='new-password'
@@ -190,6 +225,16 @@ const OperationSetting = () => {
               type='number'
               step='0.01'
               placeholder='一单位货币能兑换的额度'
+            />
+            <Form.Input
+              label='每百万 Tokens 定价'
+              name='PricePerMillionTokens'
+              onChange={handleInputChange}
+              autoComplete='new-password'
+              value={inputs.PricePerMillionTokens}
+              type='number'
+              step='0.000001'
+              placeholder='输入每 1,000,000 tokens 的价格'
             />
             <Form.Input
               label='失败重试次数'
@@ -201,6 +246,24 @@ const OperationSetting = () => {
               autoComplete='new-password'
               value={inputs.RetryTimes}
               placeholder='失败重试次数'
+            />
+          </Form.Group>
+          <Form.Group widths={4}>
+            <Form.Input
+              label='货币符号'
+              name='CurrencySymbol'
+              onChange={handleInputChange}
+              autoComplete='new-password'
+              value={inputs.CurrencySymbol}
+              placeholder='例如 ¥ 或 $'
+            />
+            <Form.Input
+              label='货币名称'
+              name='CurrencyUnitName'
+              onChange={handleInputChange}
+              autoComplete='new-password'
+              value={inputs.CurrencyUnitName}
+              placeholder='例如 CNY 或 USD'
             />
           </Form.Group>
           <Form.Group inline>

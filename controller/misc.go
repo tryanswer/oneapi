@@ -37,6 +37,8 @@ func GetStatus(c *gin.Context) {
 			"top_up_link":                 config.TopUpLink,
 			"chat_link":                   config.ChatLink,
 			"quota_per_unit":              config.QuotaPerUnit,
+			"currency_symbol":             config.CurrencySymbol,
+			"currency_unit":               config.CurrencyUnitName,
 			"display_in_currency":         config.DisplayInCurrencyEnabled,
 			"oidc":                        config.OidcEnabled,
 			"oidc_client_id":              config.OidcClientId,

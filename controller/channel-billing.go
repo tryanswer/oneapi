@@ -28,6 +28,9 @@ type OpenAISubscriptionResponse struct {
 	HardLimitUSD       float64 `json:"hard_limit_usd"`
 	SystemHardLimitUSD float64 `json:"system_hard_limit_usd"`
 	AccessUntil        int64   `json:"access_until"`
+	UsedTokens         int64   `json:"used_tokens,omitempty"`
+	RemainTokens       int64   `json:"remain_tokens,omitempty"`
+	TotalTokens        int64   `json:"total_tokens,omitempty"`
 }
 
 type OpenAIUsageDailyCost struct {
@@ -49,6 +52,9 @@ type OpenAIUsageResponse struct {
 	Object string `json:"object"`
 	//DailyCosts []OpenAIUsageDailyCost `json:"daily_costs"`
 	TotalUsage float64 `json:"total_usage"` // unit: 0.01 dollar
+	UsedTokens int64   `json:"used_tokens,omitempty"`
+	RemainTokens int64 `json:"remain_tokens,omitempty"`
+	TotalTokens int64  `json:"total_tokens,omitempty"`
 }
 
 type OpenAISBUsageResponse struct {

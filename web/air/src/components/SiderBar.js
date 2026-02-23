@@ -125,6 +125,8 @@ const SiderBar = () => {
       localStorage.setItem('logo', data.logo);
       localStorage.setItem('footer_html', data.footer_html);
       localStorage.setItem('quota_per_unit', data.quota_per_unit);
+      localStorage.setItem('currency_symbol', data.currency_symbol || '$');
+      localStorage.setItem('currency_unit', data.currency_unit || 'USD');
       localStorage.setItem('display_in_currency', data.display_in_currency);
       localStorage.setItem('enable_drawing', data.enable_drawing);
       localStorage.setItem('enable_data_export', data.enable_data_export);
