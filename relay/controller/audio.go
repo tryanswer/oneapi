@@ -30,7 +30,7 @@ import (
 func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatusCode {
 	ctx := c.Request.Context()
 	meta := meta.GetByContext(c)
-	audioModel := "whisper-1"
+	audioModel := "qwen3-asr-flash"
 
 	tokenId := c.GetInt(ctxkey.TokenId)
 	channelType := c.GetInt(ctxkey.Channel)
@@ -53,6 +53,31 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 			return openai.ErrorWrapper(errors.New("input is too long (over 4096 characters)"), "text_too_long", http.StatusBadRequest)
 		}
 	}
+	if relayMode == relaymode.AudioTranscription || relayMode == relaymode.AudioTranslation {
+		// Parse multipart form to get model name. Reset body for later proxying.
+		bodyBytes, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			return openai.ErrorWrapper(err, "read_request_body_failed", http.StatusInternalServerError)
+		}
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		_ = c.Request.ParseMultipartForm(32 << 20)
+		if modelName := c.PostForm("model"); modelName != "" {
+			audioModel = modelName
+		}
+		formKeys := make([]string, 0)
+		for key := range c.Request.MultipartForm.Value {
+			formKeys = append(formKeys, key)
+		}
+		logger.Info(ctx, fmt.Sprintf("audio request: method=%s path=%s content-type=%s form_keys=%s model=%s",
+			c.Request.Method,
+			c.Request.URL.Path,
+			c.Request.Header.Get("Content-Type"),
+			strings.Join(formKeys, ","),
+			audioModel,
+		))
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+	}
+	logger.Info(ctx, fmt.Sprintf("audio request model: %s", audioModel))
 
 	modelRatio := billingratio.GetModelRatioWithOverride(audioModel, channelType, meta.Config.ModelRatio)
 	groupRatio := billingratio.GetGroupRatio(group)
@@ -115,6 +140,7 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	if modelMapping != nil && modelMapping[audioModel] != "" {
 		audioModel = modelMapping[audioModel]
 	}
+	logger.Info(ctx, fmt.Sprintf("audio request model after mapping: %s", audioModel))
 
 	baseURL := channeltype.ChannelBaseURLs[channelType]
 	requestURL := c.Request.URL.String()

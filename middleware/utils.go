@@ -1,12 +1,15 @@
 package middleware
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common"
 	"github.com/songquanpeng/one-api/common/helper"
 	"github.com/songquanpeng/one-api/common/logger"
-	"strings"
 )
 
 func abortWithMessage(c *gin.Context, statusCode int, message string) {
@@ -21,6 +24,21 @@ func abortWithMessage(c *gin.Context, statusCode int, message string) {
 }
 
 func getRequestModel(c *gin.Context) (string, error) {
+	if strings.HasPrefix(c.Request.URL.Path, "/v1/audio/transcriptions") || strings.HasPrefix(c.Request.URL.Path, "/v1/audio/translations") {
+		// audio transcription/translation uses multipart form; extract model from form
+		bodyBytes, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			return "", fmt.Errorf("read_request_body_failed: %w", err)
+		}
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		_ = c.Request.ParseMultipartForm(32 << 20)
+		if modelName := c.Request.FormValue("model"); modelName != "" {
+			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			return modelName, nil
+		}
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		return "qwen3-asr-flash", nil
+	}
 	var modelRequest ModelRequest
 	err := common.UnmarshalBodyReusable(c, &modelRequest)
 	if err != nil {
@@ -39,11 +57,6 @@ func getRequestModel(c *gin.Context) (string, error) {
 	if strings.HasPrefix(c.Request.URL.Path, "/v1/images/generations") {
 		if modelRequest.Model == "" {
 			modelRequest.Model = "dall-e-2"
-		}
-	}
-	if strings.HasPrefix(c.Request.URL.Path, "/v1/audio/transcriptions") || strings.HasPrefix(c.Request.URL.Path, "/v1/audio/translations") {
-		if modelRequest.Model == "" {
-			modelRequest.Model = "whisper-1"
 		}
 	}
 	return modelRequest.Model, nil

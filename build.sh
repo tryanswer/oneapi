@@ -2,4 +2,4 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-go build -o one-api .
+go build -ldflags "-s -w" -o one-api
