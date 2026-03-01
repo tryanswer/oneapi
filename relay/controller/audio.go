@@ -238,6 +238,13 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
 	}
 	if resp.StatusCode != http.StatusOK {
+		responseBody, _ := io.ReadAll(resp.Body)
+		if len(responseBody) > 0 {
+			logger.Info(ctx, fmt.Sprintf("audio upstream error: status=%d body=%s", resp.StatusCode, string(responseBody)))
+		} else {
+			logger.Info(ctx, fmt.Sprintf("audio upstream error: status=%d body=<empty>", resp.StatusCode))
+		}
+		resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
 		return RelayErrorHandler(resp)
 	}
 	succeed = true
