@@ -5,13 +5,7 @@ cd "$(dirname "$0")"
 echo "fetching Go modules"
 go mod download
 
-for theme in default berry air; do
-  theme_dir="web/${theme}"
-  if [ -d "${theme_dir}" ]; then
-    echo "installing npm deps for ${theme_dir}"
-    (cd "${theme_dir}" && npm ci)
-  fi
-done
+./web/build.sh
 
 cat <<'EOF'
 Dependencies installed.
