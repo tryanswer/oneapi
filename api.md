@@ -84,3 +84,31 @@
 ## 其他注意事项
 - 新增字段后需重启 OneAPI 触发自动迁移。
 - 前端表单新增“渠道名称”下拉选项（千问/豆包/智谱/Kimi/MinMax/OpenAI/其他），允许自定义输入。
+
+## Database: SQLite -> MySQL (Local Dev)
+
+### Local MySQL DSN
+```
+SQL_DSN=root:root@tcp(127.0.0.1:3306)/openclaw?charset=utf8mb4&parseTime=True&loc=Local
+```
+
+### Migration Steps (completed)
+1. Start OneAPI once with `SQL_DSN` to auto-migrate schema.
+2. Export SQLite data to SQL inserts.
+3. Truncate MySQL tables and import data.
+
+### Notes
+- `start_oneapi.sh` now sources `.env` if present (local-only, not committed).
+- Do not commit secrets or `.env`.
+
+## Redis (Local Dev)
+
+### Environment
+```
+REDIS_CONN_STRING=redis://localhost:6379
+SYNC_FREQUENCY=60
+```
+
+### Notes
+- `SYNC_FREQUENCY` 必须设置，否则 Redis 会被禁用。
+- 若 Redis 有密码，使用：`redis://default:<password>@localhost:6379`。

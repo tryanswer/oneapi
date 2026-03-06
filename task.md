@@ -13,3 +13,10 @@
 - [x] Use token hash to deterministically pick a channel among same-priority candidates.
 - [x] Keep random fallback when no token hash is available.
 - [x] Apply to retry path while respecting priority tiers.
+
+## Switch DB to MySQL (Aliyun RDS)
+- [x] Local dev: migrate SQLite data to MySQL `openclaw` and set `SQL_DSN`.
+- [x] Local dev: enable Redis cache via `REDIS_CONN_STRING` + `SYNC_FREQUENCY`.
+- [ ] RDS: collect connection info and decide migration approach (fresh vs. migrate from SQLite).
+- [ ] RDS: configure `SQL_DSN` (and optional `LOG_SQL_DSN`) for production.
+- [ ] RDS: verify schema auto-migration and application startup with MySQL.
