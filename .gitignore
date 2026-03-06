@@ -16,3 +16,6 @@ temp
 one-api
 **/node_modules/
 /web/**/node_modules/
+task.md
+api.md
+README.md

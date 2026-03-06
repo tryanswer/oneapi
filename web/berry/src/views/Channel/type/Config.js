@@ -1,5 +1,6 @@
 const defaultConfig = {
   input: {
+    type_name: '',
     name: '',
     type: 1,
     key: '',
@@ -11,6 +12,7 @@ const defaultConfig = {
     config: {}
   },
   inputLabel: {
+    type_name: '渠道名称',
     name: '渠道名称',
     type: '渠道类型',
     base_url: '渠道API地址',
@@ -28,6 +30,7 @@ const defaultConfig = {
   },
   prompt: {
     type: '请选择渠道类型',
+    type_name: '例如：千问、豆包',
     name: '请为渠道命名',
     base_url: '可空，请输入中转API地址，例如通过cloudflare中转',
     key: '请输入渠道对应的鉴权密钥',

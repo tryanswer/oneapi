@@ -4,11 +4,15 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -26,6 +30,27 @@ import (
 	relaymodel "github.com/songquanpeng/one-api/relay/model"
 	"github.com/songquanpeng/one-api/relay/relaymode"
 )
+
+const (
+	audioCompatModelPrefix = "qwen3-asr"
+	maxAudioCompatBytes    = 30 * 1024 * 1024
+)
+
+type audioCompatPayload struct {
+	Model          string
+	Language       string
+	Prompt         string
+	ResponseFormat string
+	DataURI        string
+}
+
+type slimChatCompletionResponse struct {
+	Choices []struct {
+		Message struct {
+			Content interface{} `json:"content"`
+		} `json:"message"`
+	} `json:"choices"`
+}
 
 func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatusCode {
 	ctx := c.Request.Context()
@@ -142,6 +167,15 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	}
 	logger.Info(ctx, fmt.Sprintf("audio request model after mapping: %s", audioModel))
 
+	compatPayload, compatErr := maybeBuildAudioCompatPayload(
+		c,
+		relayMode,
+		audioModel,
+	)
+	if compatErr != nil {
+		return openai.ErrorWrapper(compatErr, "audio_compat_parse_failed", http.StatusBadRequest)
+	}
+
 	baseURL := channeltype.ChannelBaseURLs[channelType]
 	requestURL := c.Request.URL.String()
 	if c.GetString(ctxkey.BaseURL) != "" {
@@ -161,19 +195,31 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	}
 
 	requestBody := &bytes.Buffer{}
-	_, err = io.Copy(requestBody, c.Request.Body)
-	if err != nil {
-		return openai.ErrorWrapper(err, "new_request_body_failed", http.StatusInternalServerError)
+	if compatPayload != nil {
+		chatBody, err := buildAudioCompatChatBody(audioModel, compatPayload)
+		if err != nil {
+			return openai.ErrorWrapper(err, "audio_compat_build_failed", http.StatusInternalServerError)
+		}
+		requestBody = bytes.NewBuffer(chatBody)
+		logger.Info(ctx, fmt.Sprintf("audio compat: using /chat/completions for model=%s", audioModel))
+	} else {
+		_, err = io.Copy(requestBody, c.Request.Body)
+		if err != nil {
+			return openai.ErrorWrapper(err, "new_request_body_failed", http.StatusInternalServerError)
+		}
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody.Bytes()))
 	}
-	c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody.Bytes()))
 	responseFormat := c.DefaultPostForm("response_format", "json")
 
+	if compatPayload != nil {
+		fullRequestURL = openai.GetFullRequestURL(baseURL, "/v1/chat/completions", channelType)
+	}
 	req, err := http.NewRequest(c.Request.Method, fullRequestURL, requestBody)
 	if err != nil {
 		return openai.ErrorWrapper(err, "new_request_failed", http.StatusInternalServerError)
 	}
 
-	if (relayMode == relaymode.AudioTranscription || relayMode == relaymode.AudioSpeech) && channelType == channeltype.Azure {
+	if (relayMode == relaymode.AudioTranscription || relayMode == relaymode.AudioSpeech) && channelType == channeltype.Azure && compatPayload == nil {
 		// https://learn.microsoft.com/en-us/azure/ai-services/openai/whisper-quickstart?tabs=command-line#rest-api
 		apiKey := c.Request.Header.Get("Authorization")
 		apiKey = strings.TrimPrefix(apiKey, "Bearer ")
@@ -182,7 +228,11 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	} else {
 		req.Header.Set("Authorization", c.Request.Header.Get("Authorization"))
 	}
-	req.Header.Set("Content-Type", c.Request.Header.Get("Content-Type"))
+	if compatPayload != nil {
+		req.Header.Set("Content-Type", "application/json")
+	} else {
+		req.Header.Set("Content-Type", c.Request.Header.Get("Content-Type"))
+	}
 	req.Header.Set("Accept", c.Request.Header.Get("Accept"))
 
 	resp, err := client.HTTPClient.Do(req)
@@ -217,25 +267,35 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		}
 
 		var text string
-		switch responseFormat {
-		case "json":
-			text, err = getTextFromJSON(responseBody)
-		case "text":
-			text, err = getTextFromText(responseBody)
-		case "srt":
-			text, err = getTextFromSRT(responseBody)
-		case "verbose_json":
-			text, err = getTextFromVerboseJSON(responseBody)
-		case "vtt":
-			text, err = getTextFromVTT(responseBody)
-		default:
-			return openai.ErrorWrapper(errors.New("unexpected_response_format"), "unexpected_response_format", http.StatusInternalServerError)
+		if compatPayload != nil {
+			text, err = extractTextFromChatCompletion(responseBody)
+			if err == nil {
+				responseBody = buildTranscriptionResponseBody(text, responseFormat)
+			}
+		} else {
+			switch responseFormat {
+			case "json":
+				text, err = getTextFromJSON(responseBody)
+			case "text":
+				text, err = getTextFromText(responseBody)
+			case "srt":
+				text, err = getTextFromSRT(responseBody)
+			case "verbose_json":
+				text, err = getTextFromVerboseJSON(responseBody)
+			case "vtt":
+				text, err = getTextFromVTT(responseBody)
+			default:
+				return openai.ErrorWrapper(errors.New("unexpected_response_format"), "unexpected_response_format", http.StatusInternalServerError)
+			}
 		}
 		if err != nil {
 			return openai.ErrorWrapper(err, "get_text_from_body_err", http.StatusInternalServerError)
 		}
 		quota = int64(openai.CountTokenText(text, audioModel))
 		resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
+		if compatPayload != nil {
+			resp.Header.Set("Content-Type", "application/json")
+		}
 	}
 	if resp.StatusCode != http.StatusOK {
 		responseBody, _ := io.ReadAll(resp.Body)
@@ -267,6 +327,181 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError)
 	}
 	return nil
+}
+
+func maybeBuildAudioCompatPayload(
+	c *gin.Context,
+	relayMode int,
+	audioModel string,
+) (*audioCompatPayload, error) {
+	if relayMode != relaymode.AudioTranscription {
+		return nil, nil
+	}
+	if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(audioModel)), audioCompatModelPrefix) {
+		return nil, nil
+	}
+	contentType := c.Request.Header.Get("Content-Type")
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.HasPrefix(mediaType, "multipart/form-data") {
+		return nil, nil
+	}
+	boundary := params["boundary"]
+	if boundary == "" {
+		return nil, errors.New("missing multipart boundary")
+	}
+	bodyBytes, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		return nil, err
+	}
+	c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+	reader := multipart.NewReader(bytes.NewReader(bodyBytes), boundary)
+	payload := &audioCompatPayload{Model: audioModel, ResponseFormat: "json"}
+	for {
+		part, err := reader.NextPart()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		name := part.FormName()
+		if name == "" {
+			continue
+		}
+		switch name {
+		case "model":
+			if b, err := io.ReadAll(part); err == nil {
+				if v := strings.TrimSpace(string(b)); v != "" {
+					payload.Model = v
+				}
+			}
+		case "language":
+			if b, err := io.ReadAll(part); err == nil {
+				payload.Language = strings.TrimSpace(string(b))
+			}
+		case "prompt":
+			if b, err := io.ReadAll(part); err == nil {
+				payload.Prompt = strings.TrimSpace(string(b))
+			}
+		case "response_format":
+			if b, err := io.ReadAll(part); err == nil {
+				if v := strings.TrimSpace(string(b)); v != "" {
+					payload.ResponseFormat = v
+				}
+			}
+		case "file":
+			data, err := io.ReadAll(part)
+			if err != nil {
+				return nil, err
+			}
+			if len(data) == 0 {
+				return nil, errors.New("empty audio file")
+			}
+			if len(data) > maxAudioCompatBytes {
+				return nil, fmt.Errorf("audio file too large: %d bytes", len(data))
+			}
+			ext := strings.ToLower(filepath.Ext(part.FileName()))
+			audioMime := "audio/ogg"
+			switch ext {
+			case ".mp3":
+				audioMime = "audio/mpeg"
+			case ".wav":
+				audioMime = "audio/wav"
+			case ".m4a", ".mp4":
+				audioMime = "audio/mp4"
+			case ".opus":
+				audioMime = "audio/opus"
+			case ".oga", ".ogg":
+				audioMime = "audio/ogg"
+			}
+			payload.DataURI = fmt.Sprintf("data:%s;base64,%s", audioMime, base64.StdEncoding.EncodeToString(data))
+		}
+	}
+	if payload.DataURI == "" {
+		return nil, errors.New("audio file missing in multipart form")
+	}
+	return payload, nil
+}
+
+func buildAudioCompatChatBody(model string, payload *audioCompatPayload) ([]byte, error) {
+	body := map[string]interface{}{
+		"model":  model,
+		"stream": false,
+		"messages": []map[string]interface{}{
+			{
+				"role": "user",
+				"content": []map[string]interface{}{
+					{
+						"type": "input_audio",
+						"input_audio": map[string]interface{}{
+							"data": payload.DataURI,
+						},
+					},
+				},
+			},
+		},
+		"asr_options": map[string]interface{}{
+			"enable_itn": false,
+		},
+	}
+	if payload.Prompt != "" {
+		body["prompt"] = payload.Prompt
+	}
+	if payload.Language != "" {
+		body["language"] = payload.Language
+	}
+	return json.Marshal(body)
+}
+
+func extractTextFromChatCompletion(body []byte) (string, error) {
+	var resp slimChatCompletionResponse
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return "", err
+	}
+	if len(resp.Choices) == 0 {
+		return "", errors.New("chat completion missing choices")
+	}
+	content := resp.Choices[0].Message.Content
+	switch typed := content.(type) {
+	case string:
+		return strings.TrimSpace(typed), nil
+	case []interface{}:
+		parts := make([]string, 0, len(typed))
+		for _, item := range typed {
+			obj, ok := item.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if txt, ok := obj["text"].(string); ok && strings.TrimSpace(txt) != "" {
+				parts = append(parts, strings.TrimSpace(txt))
+			}
+		}
+		if len(parts) > 0 {
+			return strings.Join(parts, "\n"), nil
+		}
+	}
+	return "", errors.New("chat completion missing transcription text")
+}
+
+func buildTranscriptionResponseBody(text string, responseFormat string) []byte {
+	trimmed := strings.TrimSpace(text)
+	switch responseFormat {
+	case "text":
+		return []byte(trimmed)
+	case "verbose_json":
+		payload, _ := json.Marshal(map[string]interface{}{
+			"text": trimmed,
+		})
+		return payload
+	default:
+		payload, _ := json.Marshal(map[string]interface{}{
+			"text": trimmed,
+		})
+		return payload
+	}
 }
 
 func getTextFromVTT(body []byte) (string, error) {

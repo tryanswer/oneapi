@@ -10,6 +10,15 @@ const MODEL_MAPPING_EXAMPLE = {
     'gpt-4-0314': 'gpt-4',
     'gpt-4-32k-0314': 'gpt-4-32k'
 };
+const CHANNEL_NAME_OPTIONS = [
+    { label: '千问', value: '千问' },
+    { label: '豆包', value: '豆包' },
+    { label: '智谱', value: '智谱' },
+    { label: 'Kimi', value: 'Kimi' },
+    { label: 'MinMax', value: 'MinMax' },
+    { label: 'OpenAI', value: 'OpenAI' },
+    { label: '其他', value: '其他' }
+];
 
 function type2secretPrompt(type) {
     // inputs.type === 15 ? '按照如下格式输入：APIKey|SecretKey' : (inputs.type === 18 ? '按照如下格式输入：APPID|APISecret|APIKey' : '请输入渠道对应的鉴权密钥')
@@ -36,6 +45,7 @@ const EditChannel = (props) => {
         props.handleClose()
     };
     const originInputs = {
+        type_name: '',
         name: '',
         type: 1,
         key: '',
@@ -214,10 +224,10 @@ const EditChannel = (props) => {
 
 
     const submit = async () => {
-        if (!isEdit && (inputs.name === '' || inputs.key === '')) {
-            showInfo('请填写渠道名称和渠道密钥！');
-            return;
-        }
+                if (!isEdit && (inputs.name === '' || inputs.type_name === '' || inputs.key === '')) {
+                    showInfo('请填写渠道名称、类型名称和渠道密钥！');
+                    return;
+                }
         if (inputs.models.length === 0) {
             showInfo('请至少选择一个模型！');
             return;
@@ -389,6 +399,22 @@ const EditChannel = (props) => {
                       }}
                       value={inputs.name}
                       autoComplete='new-password'
+                    />
+                    <div style={{ marginTop: 10 }}>
+                        <Typography.Text strong>渠道名称：</Typography.Text>
+                    </div>
+                    <Select
+                      placeholder={'请选择或输入'}
+                      name='type_name'
+                      required
+                      filter
+                      allowCreate
+                      showClear
+                      onChange={value => {
+                          handleInputChange('type_name', value)
+                      }}
+                      value={inputs.type_name}
+                      optionList={CHANNEL_NAME_OPTIONS}
                     />
                     <div style={{ marginTop: 10 }}>
                         <Typography.Text strong>分组：</Typography.Text>

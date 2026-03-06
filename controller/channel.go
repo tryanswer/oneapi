@@ -84,6 +84,13 @@ func AddChannel(c *gin.Context) {
 		})
 		return
 	}
+	if strings.TrimSpace(channel.TypeName) == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "渠道名称不能为空",
+		})
+		return
+	}
 	channel.CreatedTime = helper.GetTimestamp()
 	keys := strings.Split(channel.Key, "\n")
 	channels := make([]model.Channel, 0, len(keys))

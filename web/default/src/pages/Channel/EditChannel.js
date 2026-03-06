@@ -11,6 +11,15 @@ const MODEL_MAPPING_EXAMPLE = {
   'gpt-4-0314': 'gpt-4',
   'gpt-4-32k-0314': 'gpt-4-32k',
 };
+const CHANNEL_NAME_OPTIONS = [
+  { key: 'qwen', text: '千问', value: '千问' },
+  { key: 'doubao', text: '豆包', value: '豆包' },
+  { key: 'zhipu', text: '智谱', value: '智谱' },
+  { key: 'kimi', text: 'Kimi', value: 'Kimi' },
+  { key: 'minmax', text: 'MinMax', value: 'MinMax' },
+  { key: 'openai', text: 'OpenAI', value: 'OpenAI' },
+  { key: 'other', text: '其他', value: '其他' },
+];
 
 function type2secretPrompt(type, t) {
   switch (type) {
@@ -39,6 +48,7 @@ const EditChannel = () => {
   };
 
   const originInputs = {
+    type_name: '',
     name: '',
     type: 1,
     key: '',
@@ -189,7 +199,7 @@ const EditChannel = () => {
         inputs.key = `${config.region}|${config.vertex_ai_project_id}|${config.vertex_ai_adc}`;
       }
     }
-    if (!isEdit && (inputs.name === '' || inputs.key === '')) {
+    if (!isEdit && (inputs.name === '' || inputs.key === '' || inputs.type_name === '')) {
       showInfo(t('channel.edit.messages.name_required'));
       return;
     }
@@ -297,6 +307,30 @@ const EditChannel = () => {
                 search
                 options={CHANNEL_OPTIONS}
                 value={inputs.type}
+                onChange={handleInputChange}
+              />
+            </Form.Field>
+            <Form.Field>
+              <Form.Dropdown
+                label='渠道名称'
+                name='type_name'
+                placeholder='请选择或输入'
+                required
+                search
+                selection
+                allowAdditions
+                additionLabel='新增：'
+                options={CHANNEL_NAME_OPTIONS}
+                value={inputs.type_name}
+                onAddItem={(e, { value }) => {
+                  if (!CHANNEL_NAME_OPTIONS.find((o) => o.value === value)) {
+                    CHANNEL_NAME_OPTIONS.push({
+                      key: value,
+                      text: value,
+                      value,
+                    });
+                  }
+                }}
                 onChange={handleInputChange}
               />
             </Form.Field>

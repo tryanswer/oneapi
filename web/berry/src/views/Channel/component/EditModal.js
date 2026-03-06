@@ -36,9 +36,11 @@ const icon = <CheckBoxOutlineBlankIcon fontSize="small" />;
 const checkedIcon = <CheckBoxIcon fontSize="small" />;
 
 const filter = createFilterOptions();
+const CHANNEL_NAME_OPTIONS = ['千问', '豆包', '智谱', 'Kimi', 'MinMax', 'OpenAI', '其他'];
 const validationSchema = Yup.object().shape({
   is_edit: Yup.boolean(),
   name: Yup.string().required('名称 不能为空'),
+  type_name: Yup.string().required('渠道名称 不能为空'),
   type: Yup.number().required('渠道 不能为空'),
   key: Yup.string().when(['is_edit', 'type'], {
     is: (is_edit, type) => !is_edit && type !== 33,
@@ -394,6 +396,26 @@ const EditModal = ({ open, channelId, onCancel, onOk }) => {
                 ) : (
                   <FormHelperText id="helper-tex-channel-name-label"> {inputPrompt.name} </FormHelperText>
                 )}
+              </FormControl>
+
+              <FormControl fullWidth error={Boolean(touched.type_name && errors.type_name)} sx={{ ...theme.typography.otherInput }}>
+                <Autocomplete
+                  freeSolo
+                  value={values.type_name}
+                  onChange={(_, value) => setFieldValue('type_name', value || '')}
+                  onInputChange={(_, value) => setFieldValue('type_name', value || '')}
+                  options={CHANNEL_NAME_OPTIONS}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label={inputLabel.type_name}
+                      name="type_name"
+                      onBlur={handleBlur}
+                      error={Boolean(touched.type_name && errors.type_name)}
+                      helperText={touched.type_name && errors.type_name ? errors.type_name : inputPrompt.type_name}
+                    />
+                  )}
+                />
               </FormControl>
 
               <FormControl fullWidth error={Boolean(touched.base_url && errors.base_url)} sx={{ ...theme.typography.otherInput }}>
