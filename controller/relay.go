@@ -60,6 +60,10 @@ func Relay(c *gin.Context) {
 	channelName := c.GetString(ctxkey.ChannelName)
 	group := c.GetString(ctxkey.Group)
 	originalModel := c.GetString(ctxkey.OriginalModel)
+	seed := c.GetString(ctxkey.TokenHash)
+	if seed != "" {
+		seed = seed + ":" + group + ":" + originalModel
+	}
 	go processChannelRelayError(ctx, userId, channelId, channelName, *bizErr)
 	requestId := c.GetString(helper.RequestIdKey)
 	retryTimes := config.RetryTimes
@@ -68,7 +72,7 @@ func Relay(c *gin.Context) {
 		retryTimes = 0
 	}
 	for i := retryTimes; i > 0; i-- {
-		channel, err := dbmodel.CacheGetRandomSatisfiedChannel(group, originalModel, i != retryTimes)
+		channel, err := dbmodel.CacheGetRandomSatisfiedChannel(group, originalModel, i != retryTimes, seed)
 		if err != nil {
 			logger.Errorf(ctx, "CacheGetRandomSatisfiedChannel failed: %+v", err)
 			break

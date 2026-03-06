@@ -5,16 +5,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/songquanpeng/one-api/common"
-	"github.com/songquanpeng/one-api/common/config"
-	"github.com/songquanpeng/one-api/common/logger"
-	"github.com/songquanpeng/one-api/common/random"
+	"hash/fnv"
 	"math/rand"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/songquanpeng/one-api/common"
+	"github.com/songquanpeng/one-api/common/config"
+	"github.com/songquanpeng/one-api/common/logger"
+	"github.com/songquanpeng/one-api/common/random"
 )
 
 var (
@@ -224,9 +226,9 @@ func SyncChannelCache(frequency int) {
 	}
 }
 
-func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority bool) (*Channel, error) {
+func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority bool, seed string) (*Channel, error) {
 	if !config.MemoryCacheEnabled {
-		return GetRandomSatisfiedChannel(group, model, ignoreFirstPriority)
+		return GetRandomSatisfiedChannel(group, model, ignoreFirstPriority, seed)
 	}
 	channelSyncLock.RLock()
 	defer channelSyncLock.RUnlock()
@@ -245,11 +247,23 @@ func CacheGetRandomSatisfiedChannel(group string, model string, ignoreFirstPrior
 			}
 		}
 	}
-	idx := rand.Intn(endIdx)
+	idx := pickIndex(seed, endIdx)
 	if ignoreFirstPriority {
 		if endIdx < len(channels) { // which means there are more than one priority
-			idx = random.RandRange(endIdx, len(channels))
+			idx = pickIndex(seed, len(channels)-endIdx) + endIdx
 		}
 	}
 	return channels[idx], nil
+}
+
+func pickIndex(seed string, size int) int {
+	if size <= 0 {
+		return 0
+	}
+	if seed == "" {
+		return rand.Intn(size)
+	}
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(seed))
+	return int(h.Sum32() % uint32(size))
 }

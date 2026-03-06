@@ -2,6 +2,8 @@ package model
 
 import (
 	"context"
+	"hash/fnv"
+	"math/rand"
 	"sort"
 	"strings"
 
@@ -19,7 +21,7 @@ type Ability struct {
 	Priority  *int64 `json:"priority" gorm:"bigint;default:0;index"`
 }
 
-func GetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority bool) (*Channel, error) {
+func GetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority bool, seed string) (*Channel, error) {
 	ability := Ability{}
 	groupCol := "`group`"
 	trueVal := "1"
@@ -28,26 +30,55 @@ func GetRandomSatisfiedChannel(group string, model string, ignoreFirstPriority b
 		trueVal = "true"
 	}
 
-	var err error = nil
-	var channelQuery *gorm.DB
-	if ignoreFirstPriority {
-		channelQuery = DB.Where(groupCol+" = ? and model = ? and enabled = "+trueVal, group, model)
-	} else {
-		maxPrioritySubQuery := DB.Model(&Ability{}).Select("MAX(priority)").Where(groupCol+" = ? and model = ? and enabled = "+trueVal, group, model)
-		channelQuery = DB.Where(groupCol+" = ? and model = ? and enabled = "+trueVal+" and priority = (?)", group, model, maxPrioritySubQuery)
-	}
-	if common.UsingSQLite || common.UsingPostgreSQL {
-		err = channelQuery.Order("RANDOM()").First(&ability).Error
-	} else {
-		err = channelQuery.Order("RAND()").First(&ability).Error
-	}
+	var err error
+	var maxPriority int64
+	err = DB.Model(&Ability{}).Select("MAX(priority)").Where(groupCol+" = ? and model = ? and enabled = "+trueVal, group, model).Scan(&maxPriority).Error
 	if err != nil {
 		return nil, err
 	}
+
+	var abilities []Ability
+	if ignoreFirstPriority {
+		err = DB.Where(groupCol+" = ? and model = ? and enabled = "+trueVal+" and priority < ?", group, model, maxPriority).
+			Find(&abilities).Error
+		if err != nil {
+			return nil, err
+		}
+		if len(abilities) == 0 {
+			err = DB.Where(groupCol+" = ? and model = ? and enabled = "+trueVal+" and priority = ?", group, model, maxPriority).
+				Find(&abilities).Error
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		err = DB.Where(groupCol+" = ? and model = ? and enabled = "+trueVal+" and priority = ?", group, model, maxPriority).
+			Find(&abilities).Error
+		if err != nil {
+			return nil, err
+		}
+	}
+	if len(abilities) == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	idx := pickIndexWithSeed(seed, len(abilities))
+	ability = abilities[idx]
+
 	channel := Channel{}
-	channel.Id = ability.ChannelId
 	err = DB.First(&channel, "id = ?", ability.ChannelId).Error
 	return &channel, err
+}
+
+func pickIndexWithSeed(seed string, size int) int {
+	if size <= 0 {
+		return 0
+	}
+	if seed == "" {
+		return rand.Intn(size)
+	}
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(seed))
+	return int(h.Sum32() % uint32(size))
 }
 
 func (channel *Channel) AddAbilities() error {
