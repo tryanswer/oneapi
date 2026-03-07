@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")"
 
-SERVICE_NAME="openclaw-oneapi.service"
-BIN="$(pwd)/one-api"
+source "$(dirname "$0")/common.sh"
 
-if [ ! -x "$BIN" ]; then
-  echo "one-api binary not found or not executable: $BIN" >&2
-  exit 1
-fi
+require_cmd systemctl
+
+mkdir -p "${REMOTE_ROOT}" "${REMOTE_CONFIG_DIR}" "${REMOTE_ROOT}/logs"
 
 cat > "/etc/systemd/system/${SERVICE_NAME}" <<EOF
 [Unit]
@@ -17,11 +14,13 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=$(pwd)
-ExecStart=${BIN}
+WorkingDirectory=${REMOTE_ROOT}
+EnvironmentFile=-${REMOTE_ENV_FILE}
+ExecStart=${REMOTE_BIN_PATH} --log-dir ${REMOTE_ROOT}/logs
 Restart=always
 RestartSec=3
 LimitNOFILE=1048576
+ExecStartPre=/usr/bin/test -x ${REMOTE_BIN_PATH}
 
 [Install]
 WantedBy=multi-user.target
