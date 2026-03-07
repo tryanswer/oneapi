@@ -167,6 +167,9 @@ func shouldCheckModel(c *gin.Context) bool {
 	if strings.HasPrefix(c.Request.URL.Path, "/v1/images") {
 		return true
 	}
+	if c.Request.Method == "POST" && c.Request.URL.Path == "/v1/videos/generations" {
+		return true
+	}
 	if strings.HasPrefix(c.Request.URL.Path, "/v1/audio") {
 		return true
 	}

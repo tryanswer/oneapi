@@ -147,6 +147,30 @@ func RelayNotImplemented(c *gin.Context) {
 	})
 }
 
+func relayNotImplementedWithCode(c *gin.Context, message string, code string) {
+	err := model.Error{
+		Message: message,
+		Type:    "one_api_error",
+		Param:   "",
+		Code:    code,
+	}
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"error": err,
+	})
+}
+
+func RelayVideoGenerationNotImplemented(c *gin.Context) {
+	relayNotImplementedWithCode(c, "Video generation API not implemented", "video_generation_not_implemented")
+}
+
+func RelayVideoGenerationTaskNotImplemented(c *gin.Context) {
+	relayNotImplementedWithCode(c, "Video generation task API not implemented", "video_generation_task_not_implemented")
+}
+
+func RelayVideoGenerationCancelNotImplemented(c *gin.Context) {
+	relayNotImplementedWithCode(c, "Video generation cancel API not implemented", "video_generation_cancel_not_implemented")
+}
+
 func RelayNotFound(c *gin.Context) {
 	err := model.Error{
 		Message: fmt.Sprintf("Invalid URL (%s %s)", c.Request.Method, c.Request.URL.Path),
